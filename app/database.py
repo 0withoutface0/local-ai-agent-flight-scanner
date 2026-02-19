@@ -22,7 +22,7 @@ class Flight(Base):
     date = Column(String)
     duration = Column(String)
     flightType = Column(String)
-    price_inr = Column(Integer)
+    price = Column(Integer)
     origin = Column(String)
     destination = Column(String)
     originCountry = Column(String)
@@ -39,7 +39,7 @@ def _coerce_flight(item: Dict[str, Any]) -> Dict[str, Any]:
         "date": item.get("date"),
         "duration": item.get("duration"),
         "flightType": item.get("flightType"),
-        "price_inr": int(item["price_inr"]) if item.get("price_inr") is not None else None,
+        "price": int(item["price"]) if item.get("price") is not None else None,
         "origin": item.get("origin"),
         "destination": item.get("destination"),
         "originCountry": item.get("originCountry"),

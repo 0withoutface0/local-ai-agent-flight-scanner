@@ -18,7 +18,7 @@ def is_flight_related_query(query: str) -> bool:
         'travel', 'trip', 'journey',
         'destination', 'dest',
         'origin', 'route', 'path', 'connection',
-        'price', 'fare', 'cost', 'expensive', 'cheap',
+        'price', 'fare', 'cost', 'expensive', 'cheap', 'grandTotal'
         'direct', 'nonstop', 'connecting',
         'departure', 'arrive', 'arriving', 'departing',
         'domestic', 'international'
@@ -42,7 +42,7 @@ def is_flight_related_query(query: str) -> bool:
             return True
 
     # Check for price indicators
-    if any(char in query for char in ['₹', '$', '€']):
+    if any(char in query for char in ['₹', '$', '€', 'Ft']):
         return True
 
     return False

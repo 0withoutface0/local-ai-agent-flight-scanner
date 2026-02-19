@@ -98,17 +98,6 @@ def _stable_uuid(*parts: str) -> str:
     return digest[:32]
 
 
-def _to_inr(price_total: str, currency: str) -> int:
-    value = float(price_total)
-    if currency == "INR":
-        return round(value)
-    if currency == "EUR":
-        return round(value * INR_TO_EUR_FALLBACK)
-    if currency == "HUF":
-        return round(value / INR_TO_HUF_FALLBACK)
-    return round(value * INR_TO_EUR_FALLBACK)
-
-
 @lru_cache(maxsize=256)
 def _airline_name_for_code(carrier_code: str) -> str:
     normalized_code = (carrier_code or "").strip().upper()
@@ -159,7 +148,7 @@ def fetch_flights(
             max=max_per_day,
             currencyCode="HUF",
         )
-
+        print(response.data)
         offers = response.data or []
         for offer in offers:
             itinerary = offer["itineraries"][0]
@@ -175,12 +164,12 @@ def fetch_flights(
 
             rows.append(
                 {
-                    "uuid": _stable_uuid(origin_iata, destination_iata, dep.isoformat(), str(offer["price"]["total"]), carrier_code),
+                    "uuid": _stable_uuid(origin_iata, destination_iata, dep.isoformat(), str(offer["price"]["total"]).split(".")[0], carrier_code),
                     "airline": carrier,
                     "date": dep.date().isoformat(),
                     "duration": duration,
                     "flightType": "Nonstop" if is_nonstop else "Connecting",
-                    "price_inr": _to_inr(offer["price"]["total"], offer["price"].get("currency", "HUF")),
+                    "price": int(float(offer["price"]["total"])),
                     "origin": city_origin,
                     "destination": city_destination,
                     "originCountry": country_origin,
