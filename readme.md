@@ -48,6 +48,33 @@ Model recommendation for parity with the original setup:
 - `FLIGHT_LLM_MODEL=qwen/qwen3-30b-a3b-2507` (closest to original qwen3-32b intent)
 - `LUGGAGE_LLM_MODEL=lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF` (good small local instruct model)
 
+
+## Live flight sync (Amadeus free tier)
+
+The app can now refresh `flights.db` from the Amadeus Flight Offers API on a schedule, while keeping the same SQL + LLM query flow. The provider now uses the official Amadeus SDK call style (`amadeus.shopping.flight_offers_search.get(...)`).
+
+Add these variables to `.env`:
+
+```bash
+# Enable periodic online refresh
+ENABLE_ONLINE_FLIGHT_SYNC=true
+FLIGHT_SYNC_INTERVAL_MINUTES=360
+FLIGHT_SYNC_DAYS_AHEAD=21
+FLIGHT_SYNC_MAX_PER_DAY=8
+
+# Optional route list (JSON array)
+# FLIGHT_SYNC_ROUTES=[{"origin":"New Delhi","destination":"Hanoi"},{"origin":"Mumbai","destination":"Ho Chi Minh City"}]
+
+# Amadeus self-service test credentials
+AMADEUS_CLIENT_ID=your_amadeus_client_id
+AMADEUS_CLIENT_SECRET=your_amadeus_client_secret
+```
+
+Notes:
+- Register at Amadeus for Developers and use the Self-Service test environment keys.
+- The startup flow still seeds from `data/flight_data.json` if the DB is empty, then online sync updates/inserts records.
+- Current city-to-IATA mapping is in `app/providers/amadeus.py` and now includes New Delhi, Mumbai, Hanoi, Ho Chi Minh City, Da Nang, Phu Quoc, Budapest, Tokio/Tokyo, and Osaka. Add more cities there as needed.
+
 ## Running application
 
 ```
