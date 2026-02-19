@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse
 
 from database import json_to_sqlite
+from paths import get_sqlite_db_path
 from query_chain import stream_response
 from sync_flights import sync_online_flights
 
@@ -29,6 +30,7 @@ app.add_middleware(
 )
 
 sync_task = None
+SQLITE_DB_PATH = get_sqlite_db_path()
 
 
 @app.get("/stream")
@@ -43,7 +45,7 @@ async def run_online_sync_loop():
     interval_minutes = int(os.getenv("FLIGHT_SYNC_CHECK_INTERVAL_MINUTES", os.getenv("FLIGHT_SYNC_INTERVAL_MINUTES", "5")))
     while True:
         try:
-            stats = await asyncio.to_thread(sync_online_flights, "./flights.db")
+            stats = await asyncio.to_thread(sync_online_flights, SQLITE_DB_PATH)
             if stats.get("skipped"):
                 print(
                     "Online sync skipped (recently updated). "
@@ -61,10 +63,10 @@ async def run_online_sync_loop():
 async def startup_event():
     global sync_task
 
-    db_path = Path('./flights.db')
+    db_path = Path(SQLITE_DB_PATH)
     # Check if database file exists and is empty
     if is_database_empty(db_path):
-        json_to_sqlite('./data/flight_data.json', './flights.db')
+        json_to_sqlite('./data/flight_data.json', SQLITE_DB_PATH)
 
     if os.getenv("ENABLE_ONLINE_FLIGHT_SYNC", "false").lower() == "true":
         sync_task = asyncio.create_task(run_online_sync_loop())
