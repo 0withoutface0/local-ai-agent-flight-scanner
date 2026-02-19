@@ -37,9 +37,6 @@ LMSTUDIO_API_KEY=lm-studio
 # Use model IDs that you loaded in LM Studio
 FLIGHT_LLM_MODEL=qwen/qwen3-30b-a3b-2507
 LUGGAGE_LLM_MODEL=lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF
-
-# Embedding model (LM Studio OpenAI-compatible embeddings endpoint)
-EMBEDDING_MODEL=text-embedding-nomic-embed-text-v1.5
 ```
 
 If you want to override provider per task, set `FLIGHT_LLM_PLATFORM` and `LUGGAGE_LLM_PLATFORM` to one of:
@@ -50,7 +47,6 @@ If you want to override provider per task, set `FLIGHT_LLM_PLATFORM` and `LUGGAG
 Model recommendation for parity with the original setup:
 - `FLIGHT_LLM_MODEL=qwen/qwen3-30b-a3b-2507` (closest to original qwen3-32b intent)
 - `LUGGAGE_LLM_MODEL=lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF` (good small local instruct model)
-- `EMBEDDING_MODEL=text-embedding-nomic-embed-text-v1.5` (local embedding model via LM Studio OpenAI-compatible endpoint)
 
 ## Running application
 
