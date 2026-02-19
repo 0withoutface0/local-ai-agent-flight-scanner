@@ -51,7 +51,7 @@ Model recommendation for parity with the original setup:
 
 ## Live flight sync (Amadeus free tier)
 
-The app can now refresh `flights.db` from the Amadeus Flight Offers API on a schedule, while keeping the same SQL + LLM query flow.
+The app can now refresh `flights.db` from the Amadeus Flight Offers API on a schedule, while keeping the same SQL + LLM query flow. The provider now uses the official Amadeus SDK call style (`amadeus.shopping.flight_offers_search.get(...)`).
 
 Add these variables to `.env`:
 

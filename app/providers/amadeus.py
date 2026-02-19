@@ -1,13 +1,8 @@
 import hashlib
-import json
 import os
-import urllib.parse
-import urllib.request
-from datetime import date, datetime
-from typing import Any, Dict, List, Optional
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, List
 
-AMADEUS_AUTH_URL = "https://test.api.amadeus.com/v1/security/oauth2/token"
-AMADEUS_OFFERS_URL = "https://test.api.amadeus.com/v2/shopping/flight-offers"
 INR_TO_EUR_FALLBACK = 90.0
 
 CITY_TO_IATA = {
@@ -41,13 +36,6 @@ class AmadeusConfigError(ValueError):
     pass
 
 
-def _http_json(url: str, data: Optional[bytes] = None, headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
-    req = urllib.request.Request(url, data=data, headers=headers or {})
-    with urllib.request.urlopen(req, timeout=30) as response:
-        payload = response.read().decode("utf-8")
-    return json.loads(payload)
-
-
 def city_to_iata(city: str) -> str:
     code = CITY_TO_IATA.get(city.strip().lower())
     if not code:
@@ -57,23 +45,22 @@ def city_to_iata(city: str) -> str:
     return code
 
 
-def _get_access_token(client_id: str, client_secret: str) -> str:
-    body = urllib.parse.urlencode(
-        {
-            "grant_type": "client_credentials",
-            "client_id": client_id,
-            "client_secret": client_secret,
-        }
-    ).encode("utf-8")
-    response = _http_json(
-        AMADEUS_AUTH_URL,
-        data=body,
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    token = response.get("access_token")
-    if not token:
-        raise RuntimeError(f"Failed to get Amadeus token: {response}")
-    return token
+def _build_amadeus_client() -> Any:
+    client_id = os.getenv("AMADEUS_CLIENT_ID")
+    client_secret = os.getenv("AMADEUS_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        raise AmadeusConfigError("AMADEUS_CLIENT_ID and AMADEUS_CLIENT_SECRET must be set")
+
+    try:
+        from amadeus import Client
+    except ImportError as exc:
+        raise RuntimeError(
+            "Amadeus SDK is not installed. Run `pip install amadeus` or install from requirements.txt"
+        ) from exc
+
+    # This uses the official SDK request style from Amadeus docs:
+    # amadeus.shopping.flight_offers_search.get(...)
+    return Client(client_id=client_id, client_secret=client_secret)
 
 
 def _duration_to_human(iso_duration: str) -> str:
@@ -117,36 +104,25 @@ def fetch_flights(
     adults: int = 1,
     max_per_day: int = 10,
 ) -> List[Dict[str, Any]]:
-    client_id = os.getenv("AMADEUS_CLIENT_ID")
-    client_secret = os.getenv("AMADEUS_CLIENT_SECRET")
-    if not client_id or not client_secret:
-        raise AmadeusConfigError("AMADEUS_CLIENT_ID and AMADEUS_CLIENT_SECRET must be set")
-
     origin_iata = city_to_iata(origin)
     destination_iata = city_to_iata(destination)
 
-    token = _get_access_token(client_id, client_secret)
+    amadeus = _build_amadeus_client()
 
     rows: List[Dict[str, Any]] = []
     current = start_date
     while current <= end_date:
-        params = urllib.parse.urlencode(
-            {
-                "originLocationCode": origin_iata,
-                "destinationLocationCode": destination_iata,
-                "departureDate": current.isoformat(),
-                "adults": adults,
-                "max": max_per_day,
-                "currencyCode": "INR",
-                "nonStop": "false",
-            }
-        )
-        response = _http_json(
-            f"{AMADEUS_OFFERS_URL}?{params}",
-            headers={"Authorization": f"Bearer {token}"},
+        response = amadeus.shopping.flight_offers_search.get(
+            originLocationCode=origin_iata,
+            destinationLocationCode=destination_iata,
+            departureDate=current.isoformat(),
+            adults=adults,
+            max=max_per_day,
+            currencyCode="INR",
+            nonStop=False,
         )
 
-        offers = response.get("data", [])
+        offers = response.data or []
         for offer in offers:
             itinerary = offer["itineraries"][0]
             segments = itinerary["segments"]
@@ -175,6 +151,7 @@ def fetch_flights(
                     "freeMeal": None,
                 }
             )
-        current = current.fromordinal(current.toordinal() + 1)
+
+        current += timedelta(days=1)
 
     return rows
