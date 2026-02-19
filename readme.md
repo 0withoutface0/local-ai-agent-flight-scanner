@@ -11,10 +11,9 @@
 
 | Spec                                     |           |
 |----------------------------------------- |-----------|
-| Platform to run large LLM                | Groq      |
-| Platform to run small LLM                | Ollama    |
-| LLM for SQL                              | qwen/qwen3-32b |
-| LLM for Vector Database                  | llama-3.1-8b-instant|
+| Platform to run LLMs                     | LM Studio (local) |
+| LLM for SQL                              | qwen/qwen3-30b-a3b-2507 (example) |
+| LLM for Vector Database                  | lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF (example) |
 | AI agent framework                       | LangChain |
 | SQL Database                             | SQLite    |
 | Vector Database                          | Chroma    |
@@ -25,13 +24,33 @@
 <img width="640" alt="application_architecture" src="https://github.com/user-attachments/assets/07ec6397-ac72-4be1-a19f-ba6809ce57da" />
 
 
-## Create `.env` file and set environment variables 
+## Create `.env` file and set environment variables
 
-```python
-GROQ_API_KEY=your_groq_api_key_here
-OPENAI_API_KEY=your_openai_api_key_here
-DEEPSEEK_API_KEY=your_deepseek_api_key_here
+```bash
+# Default provider is LM Studio (local)
+DEFAULT_LLM_PLATFORM=LMSTUDIO_OPENAI
+
+# LM Studio OpenAI-compatible endpoint
+LMSTUDIO_OPENAI_BASE_URL=http://127.0.0.1:1234/v1
+LMSTUDIO_API_KEY=lm-studio
+
+# Use model IDs that you loaded in LM Studio
+FLIGHT_LLM_MODEL=qwen/qwen3-30b-a3b-2507
+LUGGAGE_LLM_MODEL=lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF
+
+# Embedding model (LM Studio OpenAI-compatible embeddings endpoint)
+EMBEDDING_MODEL=text-embedding-nomic-embed-text-v1.5
 ```
+
+If you want to override provider per task, set `FLIGHT_LLM_PLATFORM` and `LUGGAGE_LLM_PLATFORM` to one of:
+- `LMSTUDIO_OPENAI` (fully local via LM Studio)
+- `OLLAMA`
+- `GROQ`
+
+Model recommendation for parity with the original setup:
+- `FLIGHT_LLM_MODEL=qwen/qwen3-30b-a3b-2507` (closest to original qwen3-32b intent)
+- `LUGGAGE_LLM_MODEL=lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF` (good small local instruct model)
+- `EMBEDDING_MODEL=text-embedding-nomic-embed-text-v1.5` (local embedding model via LM Studio OpenAI-compatible endpoint)
 
 ## Running application
 

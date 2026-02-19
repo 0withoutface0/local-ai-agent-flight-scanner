@@ -8,7 +8,12 @@ from config import luggage_llm
 from strip_think_tags import strip_think_tags
 from luggage_prompt import luggage_prompt
 
-client = openai.AsyncOpenAI()
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-nomic-embed-text-v1.5")
+
+client = openai.AsyncOpenAI(
+    api_key=os.getenv("LMSTUDIO_API_KEY", os.getenv("OPENAI_API_KEY", "lm-studio")),
+    base_url=os.getenv("LMSTUDIO_OPENAI_BASE_URL", os.getenv("OPENAI_BASE_URL", "http://127.0.0.1:1234/v1")),
+)
 
 # Usage example:
 documents = [
@@ -63,7 +68,7 @@ def split_document(text: str, max_tokens: int = 500) -> List[str]:
 
 async def get_embedding(text: str) -> List[float]:
     response = await client.embeddings.create(
-        model="text-embedding-3-small",
+        model=EMBEDDING_MODEL,
         input=text
     )
     return response.data[0].embedding
