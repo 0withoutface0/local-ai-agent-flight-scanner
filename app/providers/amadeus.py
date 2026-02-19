@@ -111,6 +111,9 @@ def fetch_flights(
     destination_iata = city_to_iata(destination)
 
     amadeus = _build_amadeus_client()
+    print("built amadeus")
+
+    print(origin_iata,destination_iata,start_date.isoformat(),adults,max_per_day,"USD",False)
 
     rows: List[Dict[str, Any]] = []
     current = start_date

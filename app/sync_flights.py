@@ -15,18 +15,15 @@ from providers.amadeus import fetch_flights
 
 def _default_routes() -> List[Tuple[str, str]]:
     return [
-        ("New Delhi", "Hanoi"),
-        ("New Delhi", "Ho Chi Minh City"),
-        ("Mumbai", "Hanoi"),
-        ("Mumbai", "Ho Chi Minh City"),
-        ("Hanoi", "New Delhi"),
-        ("Ho Chi Minh City", "Mumbai"),
+        ("Osaka", "Budapest"),
+        ("Tokio", "Budapest"),
     ]
 
 
 def _load_routes() -> List[Tuple[str, str]]:
     env_routes = os.getenv("FLIGHT_SYNC_ROUTES")
     if not env_routes:
+        print("no roots")
         return _default_routes()
 
     parsed = json.loads(env_routes)
@@ -65,13 +62,15 @@ def sync_online_flights(sqlite_file: str = "./flights.db") -> Dict[str, Any]:
         }
 
     routes = _load_routes()
+    print("loaded routes")
     days_ahead = int(os.getenv("FLIGHT_SYNC_DAYS_AHEAD", "21"))
     max_per_day = int(os.getenv("FLIGHT_SYNC_MAX_PER_DAY", "8"))
 
-    start = date.today()
+    start = date(2026, 8, 8)
     end = start + timedelta(days=days_ahead)
 
     all_rows = []
+    print("fetching flights")
     for origin, destination in routes:
         rows = fetch_flights(
             origin=origin,
@@ -81,6 +80,7 @@ def sync_online_flights(sqlite_file: str = "./flights.db") -> Dict[str, Any]:
             max_per_day=max_per_day,
         )
         all_rows.extend(rows)
+    print("fetched flights")
 
     stats = upsert_flights(all_rows, sqlite_file)
     set_sync_metadata(SYNC_KEY_LAST_SUCCESS_EPOCH, str(int(time.time())), sqlite_file)
