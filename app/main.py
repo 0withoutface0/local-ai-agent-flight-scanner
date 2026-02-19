@@ -1,11 +1,16 @@
+import asyncio
+import os
 import sqlite3
 from pathlib import Path
+
 import uvicorn
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse
+
 from database import json_to_sqlite
 from query_chain import stream_response
+from sync_flights import sync_online_flights
 
 # Initialize the FastAPI app
 app = FastAPI(title="Flight Query API")
@@ -23,22 +28,50 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+sync_task = None
+
+
 @app.get("/stream")
 async def stream_query(question: str = Query(...)):
     return EventSourceResponse(
-        stream_response(question),  # Remove 'events=' keyword
+        stream_response(question),
         media_type="text/event-stream"
     )
+
+
+async def run_online_sync_loop():
+    interval_minutes = int(os.getenv("FLIGHT_SYNC_INTERVAL_MINUTES", "360"))
+    while True:
+        try:
+            stats = await asyncio.to_thread(sync_online_flights, "./flights.db")
+            print(f"Online sync complete. Inserted={stats['inserted']}, Updated={stats['updated']}")
+        except Exception as exc:
+            print(f"Online sync skipped/failed: {exc}")
+        await asyncio.sleep(interval_minutes * 60)
+
 
 # Event handlers for startup and shutdown
 @app.on_event("startup")
 async def startup_event():
+    global sync_task
+
     db_path = Path('./flights.db')
     # Check if database file exists and is empty
     if is_database_empty(db_path):
         json_to_sqlite('./data/flight_data.json', './flights.db')
 
+    if os.getenv("ENABLE_ONLINE_FLIGHT_SYNC", "false").lower() == "true":
+        sync_task = asyncio.create_task(run_online_sync_loop())
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    if sync_task:
+        sync_task.cancel()
+
+
 def is_database_empty(db_path):
+    conn = None
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -60,9 +93,9 @@ def is_database_empty(db_path):
         print(f"Error checking database: {e}")
         return True
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 
 if __name__ == "__main__":
-    # Run the application using uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
