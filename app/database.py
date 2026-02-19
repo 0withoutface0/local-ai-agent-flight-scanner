@@ -1,6 +1,8 @@
 import json
+import sqlite3
+import time
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Optional
 
 from sqlalchemy import REAL, Column, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -8,6 +10,8 @@ from sqlalchemy.orm import sessionmaker
 
 # 1. Define the Database Model (Table Structure)
 Base = declarative_base()
+
+SYNC_KEY_LAST_SUCCESS_EPOCH = "last_successful_online_sync_epoch"
 
 
 class Flight(Base):
@@ -44,6 +48,56 @@ def _coerce_flight(item: Dict[str, Any]) -> Dict[str, Any]:
         "rainProbability": float(item["rainProbability"]) if item.get("rainProbability") is not None else None,
         "freeMeal": int(bool(item.get("freeMeal"))) if item.get("freeMeal") is not None else None,
     }
+
+
+def _ensure_sync_metadata_table(sqlite_file: str) -> None:
+    conn = sqlite3.connect(sqlite_file)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS sync_metadata (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at INTEGER NOT NULL
+            )
+            """
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_sync_metadata(key: str, sqlite_file: str) -> Optional[str]:
+    _ensure_sync_metadata_table(sqlite_file)
+    conn = sqlite3.connect(sqlite_file)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT value FROM sync_metadata WHERE key=?", (key,))
+        row = cursor.fetchone()
+        return row[0] if row else None
+    finally:
+        conn.close()
+
+
+def set_sync_metadata(key: str, value: str, sqlite_file: str) -> None:
+    _ensure_sync_metadata_table(sqlite_file)
+    conn = sqlite3.connect(sqlite_file)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO sync_metadata(key, value, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET
+                value=excluded.value,
+                updated_at=excluded.updated_at
+            """,
+            (key, value, int(time.time())),
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def upsert_flights(flights: Iterable[Dict[str, Any]], sqlite_file: str) -> Dict[str, int]:

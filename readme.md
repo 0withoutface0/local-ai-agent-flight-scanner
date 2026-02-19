@@ -58,7 +58,8 @@ Add these variables to `.env`:
 ```bash
 # Enable periodic online refresh
 ENABLE_ONLINE_FLIGHT_SYNC=true
-FLIGHT_SYNC_INTERVAL_MINUTES=360
+FLIGHT_SYNC_CHECK_INTERVAL_MINUTES=5
+FLIGHT_SYNC_MIN_UPDATE_GAP_MINUTES=10
 FLIGHT_SYNC_DAYS_AHEAD=21
 FLIGHT_SYNC_MAX_PER_DAY=8
 
@@ -73,6 +74,9 @@ AMADEUS_CLIENT_SECRET=your_amadeus_client_secret
 Notes:
 - Register at Amadeus for Developers and use the Self-Service test environment keys.
 - The startup flow still seeds from `data/flight_data.json` if the DB is empty, then online sync updates/inserts records.
+- Last successful online sync time is persisted in SQLite (`sync_metadata` table), so restarts do not force immediate re-fetch.
+- `FLIGHT_SYNC_MIN_UPDATE_GAP_MINUTES` (default `10`) controls the minimum gap between successful refreshes.
+- `FLIGHT_SYNC_CHECK_INTERVAL_MINUTES` controls how often the background loop checks whether an update is needed.
 - Current city-to-IATA mapping is in `app/providers/amadeus.py` and now includes New Delhi, Mumbai, Hanoi, Ho Chi Minh City, Da Nang, Phu Quoc, Budapest, Tokio/Tokyo, and Osaka. Add more cities there as needed.
 
 ## Running application

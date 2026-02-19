@@ -40,11 +40,17 @@ async def stream_query(question: str = Query(...)):
 
 
 async def run_online_sync_loop():
-    interval_minutes = int(os.getenv("FLIGHT_SYNC_INTERVAL_MINUTES", "360"))
+    interval_minutes = int(os.getenv("FLIGHT_SYNC_CHECK_INTERVAL_MINUTES", os.getenv("FLIGHT_SYNC_INTERVAL_MINUTES", "5")))
     while True:
         try:
             stats = await asyncio.to_thread(sync_online_flights, "./flights.db")
-            print(f"Online sync complete. Inserted={stats['inserted']}, Updated={stats['updated']}")
+            if stats.get("skipped"):
+                print(
+                    "Online sync skipped (recently updated). "
+                    f"Remaining seconds={stats.get('remaining_seconds', 0)}"
+                )
+            else:
+                print(f"Online sync complete. Inserted={stats['inserted']}, Updated={stats['updated']}")
         except Exception as exc:
             print(f"Online sync skipped/failed: {exc}")
         await asyncio.sleep(interval_minutes * 60)
