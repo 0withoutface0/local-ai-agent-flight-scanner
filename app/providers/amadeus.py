@@ -1,6 +1,7 @@
 import hashlib
 import os
 from datetime import date, datetime, timedelta
+from functools import lru_cache
 from typing import Any, Dict, List
 
 INR_TO_EUR_FALLBACK = 90.0
@@ -30,6 +31,15 @@ IATA_TO_CITY = {
     "BUD": ("Budapest", "Hungary"),
     "TYO": ("Tokio", "Japan"),
     "OSA": ("Osaka", "Japan"),
+}
+
+AIRLINE_CODE_FALLBACKS = {
+    "CA": "Air China",
+    "CZ": "China Southern Airlines",
+    "KE": "Korean Air",
+    "TK": "Turkish Airlines",
+    "JL": "Japan Airlines",
+    "QR": "Qatar Airways",
 }
 
 
@@ -99,6 +109,32 @@ def _to_inr(price_total: str, currency: str) -> int:
     return round(value * INR_TO_EUR_FALLBACK)
 
 
+@lru_cache(maxsize=256)
+def _airline_name_for_code(carrier_code: str) -> str:
+    normalized_code = (carrier_code or "").strip().upper()
+    if not normalized_code:
+        return "Unknown"
+
+    fallback_name = AIRLINE_CODE_FALLBACKS.get(normalized_code, normalized_code)
+
+    try:
+        amadeus = _build_amadeus_client()
+        response = amadeus.reference_data.airlines.get(airlineCodes=normalized_code)
+        airlines = response.data or []
+        if airlines:
+            airline = airlines[0]
+            return (
+                airline.get("businessName")
+                or airline.get("commonName")
+                or airline.get("iataCode")
+                or fallback_name
+            )
+    except Exception:
+        return fallback_name
+
+    return fallback_name
+
+
 def fetch_flights(
     origin: str,
     destination: str,
@@ -111,9 +147,6 @@ def fetch_flights(
     destination_iata = city_to_iata(destination)
 
     amadeus = _build_amadeus_client()
-    print("built amadeus")
-
-    print(origin_iata,destination_iata,start_date.isoformat(),adults,max_per_day,"USD",False)
 
     rows: List[Dict[str, Any]] = []
     current = start_date
@@ -131,7 +164,8 @@ def fetch_flights(
         for offer in offers:
             itinerary = offer["itineraries"][0]
             segments = itinerary["segments"]
-            carrier = segments[0].get("carrierCode", "Unknown")
+            carrier_code = segments[0].get("carrierCode", "Unknown")
+            carrier = _airline_name_for_code(carrier_code)
             duration = _duration_to_human(itinerary.get("duration", ""))
             is_nonstop = len(segments) == 1
             dep = datetime.fromisoformat(segments[0]["departure"]["at"])
@@ -141,7 +175,7 @@ def fetch_flights(
 
             rows.append(
                 {
-                    "uuid": _stable_uuid(origin_iata, destination_iata, dep.isoformat(), str(offer["price"]["total"]), carrier),
+                    "uuid": _stable_uuid(origin_iata, destination_iata, dep.isoformat(), str(offer["price"]["total"]), carrier_code),
                     "airline": carrier,
                     "date": dep.date().isoformat(),
                     "duration": duration,
