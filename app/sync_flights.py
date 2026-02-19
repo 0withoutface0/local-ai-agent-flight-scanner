@@ -10,6 +10,7 @@ from database import (
     set_sync_metadata,
     upsert_flights,
 )
+from paths import get_sqlite_db_path
 from providers.amadeus import fetch_flights
 
 
@@ -43,7 +44,8 @@ def _get_last_success_epoch(sqlite_file: str) -> int:
         return 0
 
 
-def sync_online_flights(sqlite_file: str = "./flights.db") -> Dict[str, Any]:
+def sync_online_flights(sqlite_file: str | None = None) -> Dict[str, Any]:
+    sqlite_file = sqlite_file or get_sqlite_db_path()
     min_gap_minutes = int(os.getenv("FLIGHT_SYNC_MIN_UPDATE_GAP_MINUTES", "10"))
     min_gap_seconds = max(min_gap_minutes, 0) * 60
 

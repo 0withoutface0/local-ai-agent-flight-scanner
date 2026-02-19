@@ -4,6 +4,8 @@ from llm import get_llm
 from sqlalchemy import create_engine
 from langchain_community.utilities import SQLDatabase
 
+from paths import get_sqlite_db_path
+
 # LLM setup
 default_platform = os.getenv('DEFAULT_LLM_PLATFORM', 'LMSTUDIO_OPENAI')
 
@@ -17,7 +19,7 @@ luggage_llm = get_llm(
 )
 
 # Database setup
-URL = 'sqlite:///flights.db'
+URL = f"sqlite:///{get_sqlite_db_path()}"
 engine = create_engine(URL, echo=False)
 db = SQLDatabase(engine)
 
