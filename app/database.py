@@ -100,6 +100,22 @@ def set_sync_metadata(key: str, value: str, sqlite_file: str) -> None:
         conn.close()
 
 
+def get_flight_count(sqlite_file: str) -> int:
+    conn = sqlite3.connect(sqlite_file)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='flights'")
+        table_exists = cursor.fetchone() is not None
+        if not table_exists:
+            return 0
+
+        cursor.execute("SELECT COUNT(*) FROM flights")
+        row = cursor.fetchone()
+        return int(row[0]) if row else 0
+    finally:
+        conn.close()
+
+
 def upsert_flights(flights: Iterable[Dict[str, Any]], sqlite_file: str) -> Dict[str, int]:
     """Insert or update flights by uuid."""
     engine = create_engine(f"sqlite:///{sqlite_file}")
