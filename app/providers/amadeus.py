@@ -18,6 +18,10 @@ CITY_TO_IATA = {
     "ho chi minh city": "SGN",
     "da nang": "DAD",
     "phu quoc": "PQC",
+    "budapest": "BUD",
+    "tokio": "TYO",
+    "tokyo": "TYO",
+    "osaka": "OSA",
 }
 
 IATA_TO_CITY = {
@@ -27,6 +31,9 @@ IATA_TO_CITY = {
     "SGN": ("Ho Chi Minh City", "Vietnam"),
     "DAD": ("Da Nang", "Vietnam"),
     "PQC": ("Phu Quoc", "Vietnam"),
+    "BUD": ("Budapest", "Hungary"),
+    "TYO": ("Tokio", "Japan"),
+    "OSA": ("Osaka", "Japan"),
 }
 
 
