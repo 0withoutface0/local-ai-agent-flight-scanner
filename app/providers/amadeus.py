@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 from typing import Any, Dict, List
 
 INR_TO_EUR_FALLBACK = 90.0
+INR_TO_HUF_FALLBACK = 4.3
 
 CITY_TO_IATA = {
     "new delhi": "DEL",
@@ -93,6 +94,8 @@ def _to_inr(price_total: str, currency: str) -> int:
         return round(value)
     if currency == "EUR":
         return round(value * INR_TO_EUR_FALLBACK)
+    if currency == "HUF":
+        return round(value / INR_TO_HUF_FALLBACK)
     return round(value * INR_TO_EUR_FALLBACK)
 
 
@@ -118,8 +121,7 @@ def fetch_flights(
             departureDate=current.isoformat(),
             adults=adults,
             max=max_per_day,
-            currencyCode="INR",
-            nonStop=False,
+            currencyCode="HUF",
         )
 
         offers = response.data or []
@@ -141,7 +143,7 @@ def fetch_flights(
                     "date": dep.date().isoformat(),
                     "duration": duration,
                     "flightType": "Nonstop" if is_nonstop else "Connecting",
-                    "price_inr": _to_inr(offer["price"]["total"], offer["price"].get("currency", "INR")),
+                    "price_inr": _to_inr(offer["price"]["total"], offer["price"].get("currency", "HUF")),
                     "origin": city_origin,
                     "destination": city_destination,
                     "originCountry": country_origin,
